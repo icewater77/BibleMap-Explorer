@@ -2,19 +2,19 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { LocationData, LocationDetails } from "../types";
 
-const apiKey = process.env.API_KEY;
-const ai = new GoogleGenAI({ apiKey: apiKey || "" });
+// Note: process.env.API_KEY is injected via Vite's define config
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 const locationListSchema = {
   type: Type.ARRAY,
   items: {
     type: Type.OBJECT,
     properties: {
-      name: { type: Type.STRING, description: "Traditional Chinese name" },
-      englishName: { type: Type.STRING, description: "English name" },
+      name: { type: Type.STRING, description: "Traditional Chinese name of the biblical location" },
+      englishName: { type: Type.STRING, description: "English name of the biblical location" },
       latitude: { type: Type.NUMBER },
       longitude: { type: Type.NUMBER },
-      shortDescription: { type: Type.STRING }
+      shortDescription: { type: Type.STRING, description: "One sentence summary of its significance in the Recovery Version." }
     },
     required: ["name", "englishName", "latitude", "longitude", "shortDescription"]
   }
@@ -24,14 +24,14 @@ const locationDetailsSchema = {
   type: Type.OBJECT,
   properties: {
     fullDescription: { type: Type.STRING },
-    historicalSignificance: { type: Type.STRING },
+    historicalSignificance: { type: Type.STRING, description: "Spiritual significance based on the Recovery Version footnotes." },
     verses: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
           reference: { type: Type.STRING, description: "e.g., 創世記 12:1" },
-          text: { type: Type.STRING, description: "Strictly use the Recovery Version (恢復本) text." }
+          text: { type: Type.STRING, description: "Exact text from the Recovery Version Bible (聖經恢復本)." }
         },
         required: ["reference", "text"]
       }
@@ -54,23 +54,19 @@ const parseJSONResponse = (text: string | undefined) => {
   }
 };
 
-// Helper to generate TWGBR line link
-// Example: https://line.twgbr.org/recoveryversion/bible/
-// We simulate a search or direct link if possible, 
-// though direct deep linking to verses on that specific mobile-optimized site is complex,
-// we provide a link to the main reader.
-const getTWGBRLink = (reference: string) => {
+// Based on the user's request: https://line.twgbr.org/recoveryversion/bible/
+const getTWGBRLink = () => {
   return `https://line.twgbr.org/recoveryversion/bible/`;
 };
 
 export const fetchBibleLocations = async (query: string = ""): Promise<LocationData[]> => {
   try {
     const prompt = query 
-      ? `Find biblical locations related to "${query}" based on the Recovery Version Bible. Provide coordinates.`
-      : `List 10 major biblical locations (e.g., Jerusalem, Bethel, Shechem) from the Recovery Version context.`;
+      ? `Search for biblical locations related to "${query}" in the context of the Recovery Version Bible. Provide geographical coordinates.`
+      : `Provide a list of 10 major biblical cities or landmarks mentioned in the Old and New Testament Recovery Version.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -84,36 +80,38 @@ export const fetchBibleLocations = async (query: string = ""): Promise<LocationD
       id: `${item.englishName.replace(/\s+/g, '-')}-${index}`
     }));
   } catch (error) {
-    console.error(error);
+    console.error("fetchBibleLocations error:", error);
     return [];
   }
 };
 
 export const fetchLocationDetails = async (location: LocationData): Promise<LocationDetails> => {
   const prompt = `
-    Provide details for "${location.name}" (${location.englishName}) strictly using the Recovery Version (聖經恢復本) of the Bible.
-    Include historical context and key verses. 
-    The verses MUST be the exact text from the Recovery Version.
+    Analyze the biblical location "${location.name}" (${location.englishName}).
+    1. Use the Recovery Version (聖經恢復本) for all scripture references.
+    2. Focus on the spiritual significance as emphasized in Witness Lee's ministry and Recovery Version footnotes.
+    3. Provide 3-5 key verses with their full text strictly from the Recovery Version.
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-pro-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
       responseSchema: locationDetailsSchema,
+      thinkingConfig: { thinkingBudget: 4000 }
     }
   });
 
   const details = parseJSONResponse(response.text);
-  if (!details) throw new Error("Failed to load details");
+  if (!details) throw new Error("Failed to parse location details");
 
   return {
     ...location,
     ...details,
     verses: details.verses.map((v: any) => ({
       ...v,
-      url: getTWGBRLink(v.reference)
+      url: getTWGBRLink()
     }))
   };
 };
