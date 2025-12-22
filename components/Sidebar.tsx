@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Search, BookOpen, MapPin, ExternalLink, ChevronLeft, Loader2 } from 'lucide-react';
+import { Search, BookOpen, MapPin, ExternalLink, ChevronLeft, Loader2, Library } from 'lucide-react';
 import { LocationData, LocationDetails, LoadingState } from '../types';
 
 interface SidebarProps {
@@ -27,22 +28,21 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200 shadow-lg z-20 relative">
+    <div className="flex flex-col h-full bg-white border-r border-gray-200 shadow-lg z-20 relative font-sans">
       {/* Header */}
-      <div className="p-4 bg-blue-900 text-white shadow-md">
+      <div className="p-5 bg-gradient-to-r from-amber-900 to-amber-800 text-white shadow-lg">
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <BookOpen className="w-6 h-6" />
-          聖經地圖 Explorer
+          <Library className="w-6 h-6 text-amber-300" />
+          聖經恢復本地圖
         </h1>
-        <p className="text-blue-200 text-xs mt-1">探索聖經中的地理與經節</p>
+        <p className="text-amber-200 text-[10px] tracking-widest uppercase mt-1 opacity-80">Recovery Version Bible Explorer</p>
       </div>
 
-      {/* Details View */}
       {selectedDetails ? (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-stone-50">
           <button 
             onClick={onBackToList}
-            className="flex items-center gap-1 text-blue-700 p-4 hover:bg-blue-50 w-full font-medium transition-colors border-b"
+            className="flex items-center gap-1 text-amber-900 p-4 hover:bg-amber-100/50 w-full font-bold transition-colors border-b border-stone-200"
           >
             <ChevronLeft className="w-4 h-4" />
             返回列表
@@ -50,38 +50,54 @@ const Sidebar: React.FC<SidebarProps> = ({
           
           <div className="p-6 space-y-6">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-1">{selectedDetails.name}</h2>
-              <p className="text-gray-500 text-sm">{selectedDetails.englishName}</p>
+              <h2 className="text-3xl font-serif font-bold text-stone-900 mb-1">{selectedDetails.name}</h2>
+              <p className="text-stone-500 italic text-sm">{selectedDetails.englishName}</p>
             </div>
 
-            <a 
-              href={selectedDetails.googleMapsUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm"
-            >
-              <MapPin className="w-4 h-4" />
-              在 Google Maps 中開啟
-              <ExternalLink className="w-3 h-3 ml-1" />
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <a 
+                href={selectedDetails.googleMapsUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-stone-800 text-white rounded hover:bg-stone-950 transition-colors text-xs font-medium shadow-sm"
+              >
+                <MapPin className="w-3 h-3" />
+                Google Maps
+              </a>
+            </div>
 
-            <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
-              <h3 className="font-bold text-amber-900 mb-2">歷史背景</h3>
-              <p className="text-amber-800 text-sm leading-relaxed">
+            <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
+              <h3 className="font-bold text-stone-900 mb-3 text-sm uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-amber-600 rounded-full"></span>
+                歷史背景與屬靈意義
+              </h3>
+              <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">
                 {selectedDetails.historicalSignificance}
               </p>
             </div>
 
             <div>
-              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-blue-600" />
-                相關經節
+              <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
+                <BookOpen className="w-4 h-4 text-amber-700" />
+                相關經節 (恢復本)
               </h3>
               <div className="space-y-4">
                 {selectedDetails.verses.map((verse, idx) => (
-                  <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors">
-                    <span className="block text-blue-700 font-bold text-sm mb-1">{verse.reference}</span>
-                    <p className="text-gray-700 leading-relaxed font-serif">{verse.text}</p>
+                  <div key={idx} className="verse-card p-5 rounded-lg shadow-sm border border-stone-200 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-amber-900 font-bold text-sm">{verse.reference}</span>
+                      {verse.url && (
+                        <a 
+                          href={verse.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-[10px] text-stone-400 hover:text-amber-700 flex items-center gap-1"
+                        >
+                          於 TWGBR 閱讀 <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-stone-800 leading-loose font-serif text-[15px]">{verse.text}</p>
                   </div>
                 ))}
               </div>
@@ -89,52 +105,44 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       ) : (
-        /* List View */
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="p-4 border-b border-stone-200 bg-stone-50">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
-                placeholder="搜尋地名 (如：伯利恆)..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+                placeholder="搜尋地名 (如：耶路撒冷)..."
+                className="w-full pl-10 pr-4 py-2 bg-white border border-stone-300 rounded-full focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-shadow text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
-              <button type="submit" className="hidden">Search</button>
+              <Search className="absolute left-3.5 top-2.5 text-stone-400 w-4 h-4" />
             </form>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-3">
             {loadingState === LoadingState.LOADING_LIST ? (
-              <div className="flex flex-col items-center justify-center h-40 text-gray-500 gap-2">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span>正在搜尋聖經地理資料...</span>
+              <div className="flex flex-col items-center justify-center h-40 text-stone-400 gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-amber-700" />
+                <span className="text-xs font-medium uppercase tracking-widest">載入中...</span>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2">
                 {locations.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-10 px-4">
-                    <p>找不到相關地名。</p>
-                    <p className="text-sm mt-2">試著搜尋 "加利利" 或 "耶路撒冷"</p>
+                  <div className="text-center text-stone-400 mt-10 px-4 italic text-sm">
+                    找不到相關地名。
                   </div>
                 ) : (
                   locations.map((loc) => (
                     <button
                       key={loc.id}
                       onClick={() => onSelectLocation(loc)}
-                      className="w-full text-left p-3 rounded-lg hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all group"
+                      className="w-full text-left p-4 rounded-xl hover:bg-amber-50 border border-stone-100 hover:border-amber-200 transition-all group shadow-sm bg-white"
                     >
                       <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-gray-800 group-hover:text-blue-800">{loc.name}</h3>
-                        {loadingState === LoadingState.LOADING_DETAILS && selectedDetails === null && (
-                           // Show spinner on the clicked item if strictly necessary, 
-                           // but simplistic approach is global spinner overlay or checking ID.
-                           // For simplicity, we rely on global loading overlay or toast in App.
-                           <span className="hidden">Loading</span>
-                        )}
+                        <h3 className="font-bold text-stone-800 group-hover:text-amber-900">{loc.name}</h3>
+                        <MapPin className="w-3.5 h-3.5 text-stone-300 group-hover:text-amber-600" />
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{loc.shortDescription}</p>
+                      <p className="text-xs text-stone-500 mt-2 line-clamp-2 leading-relaxed">{loc.shortDescription}</p>
                     </button>
                   ))
                 )}

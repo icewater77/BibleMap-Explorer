@@ -1,76 +1,73 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { LocationData, LocationDetails } from "../types";
 
 const apiKey = process.env.API_KEY;
-const ai = new GoogleGenAI({ apiKey });
+const ai = new GoogleGenAI({ apiKey: apiKey || "" });
 
-// Schema for listing locations
 const locationListSchema = {
   type: Type.ARRAY,
   items: {
     type: Type.OBJECT,
     properties: {
-      name: { type: Type.STRING, description: "The name of the location in Traditional Chinese (e.g., 耶路撒冷)" },
-      englishName: { type: Type.STRING, description: "The name of the location in English" },
-      latitude: { type: Type.NUMBER, description: "The latitude coordinate" },
-      longitude: { type: Type.NUMBER, description: "The longitude coordinate" },
-      shortDescription: { type: Type.STRING, description: "A very brief summary (10-15 words) in Traditional Chinese" }
+      name: { type: Type.STRING, description: "Traditional Chinese name" },
+      englishName: { type: Type.STRING, description: "English name" },
+      latitude: { type: Type.NUMBER },
+      longitude: { type: Type.NUMBER },
+      shortDescription: { type: Type.STRING }
     },
     required: ["name", "englishName", "latitude", "longitude", "shortDescription"]
   }
 };
 
-// Schema for detailed location info
 const locationDetailsSchema = {
   type: Type.OBJECT,
   properties: {
-    fullDescription: { type: Type.STRING, description: "A detailed description of the place in the context of the Bible, in Traditional Chinese." },
-    historicalSignificance: { type: Type.STRING, description: "Historical geography and archaeological context in Traditional Chinese." },
+    fullDescription: { type: Type.STRING },
+    historicalSignificance: { type: Type.STRING },
     verses: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          reference: { type: Type.STRING, description: "Book Chapter:Verse (e.g., 馬太福音 2:1)" },
-          text: { type: Type.STRING, description: "The content of the verse in Traditional Chinese (Union Version or Recovery Version style)." }
+          reference: { type: Type.STRING, description: "e.g., 創世記 12:1" },
+          text: { type: Type.STRING, description: "Strictly use the Recovery Version (恢復本) text." }
         },
         required: ["reference", "text"]
       }
     },
-    googleMapsUrl: { type: Type.STRING, description: "A direct Google Maps link for this location." }
+    googleMapsUrl: { type: Type.STRING }
   },
   required: ["fullDescription", "historicalSignificance", "verses", "googleMapsUrl"]
 };
 
-// Helper to safely parse JSON from Gemini response
 const parseJSONResponse = (text: string | undefined) => {
   if (!text) return null;
   try {
     return JSON.parse(text);
   } catch (e) {
-    // If simple parse fails, try to strip markdown code blocks
     const match = text.match(/```json([\s\S]*?)```/);
     if (match) {
-      try {
-        return JSON.parse(match[1]);
-      } catch (e2) {
-        console.error("Failed to parse inner JSON", e2);
-        return null;
-      }
+      try { return JSON.parse(match[1]); } catch (e2) { return null; }
     }
-    console.error("Failed to parse JSON response", e);
     return null;
   }
 };
 
+// Helper to generate TWGBR line link
+// Example: https://line.twgbr.org/recoveryversion/bible/
+// We simulate a search or direct link if possible, 
+// though direct deep linking to verses on that specific mobile-optimized site is complex,
+// we provide a link to the main reader.
+const getTWGBRLink = (reference: string) => {
+  return `https://line.twgbr.org/recoveryversion/bible/`;
+};
+
 export const fetchBibleLocations = async (query: string = ""): Promise<LocationData[]> => {
   try {
-    let prompt = "";
-    if (query) {
-      prompt = `List biblical locations that match or are related to "${query}". Provide their coordinates and a short description in Traditional Chinese.`;
-    } else {
-      prompt = `List 10 most famous and significant locations mentioned in the New and Old Testaments of the Bible (e.g., Jerusalem, Bethlehem, Nazareth, Sea of Galilee, etc.). Provide their coordinates and a short description in Traditional Chinese.`;
-    }
+    const prompt = query 
+      ? `Find biblical locations related to "${query}" based on the Recovery Version Bible. Provide coordinates.`
+      : `List 10 major biblical locations (e.g., Jerusalem, Bethel, Shechem) from the Recovery Version context.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -82,48 +79,41 @@ export const fetchBibleLocations = async (query: string = ""): Promise<LocationD
     });
 
     const data = parseJSONResponse(response.text);
-    if (data && Array.isArray(data)) {
-      // Add unique IDs
-      return data.map((item: any, index: number) => ({
-        ...item,
-        id: `${item.englishName.replace(/\s+/g, '-')}-${index}`
-      }));
-    }
-    return [];
+    return (data || []).map((item: any, index: number) => ({
+      ...item,
+      id: `${item.englishName.replace(/\s+/g, '-')}-${index}`
+    }));
   } catch (error) {
-    console.error("Error fetching locations:", error);
-    throw error;
+    console.error(error);
+    return [];
   }
 };
 
 export const fetchLocationDetails = async (location: LocationData): Promise<LocationDetails> => {
-  try {
-    const prompt = `
-      Provide detailed biblical information for "${location.name}" (${location.englishName}).
-      Include a historical description, significance in the Bible, and key Bible verses where this place is mentioned.
-      Ensure all text is in Traditional Chinese.
-      The output must strictly follow the JSON schema.
-    `;
+  const prompt = `
+    Provide details for "${location.name}" (${location.englishName}) strictly using the Recovery Version (聖經恢復本) of the Bible.
+    Include historical context and key verses. 
+    The verses MUST be the exact text from the Recovery Version.
+  `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: locationDetailsSchema,
-      }
-    });
-
-    const details = parseJSONResponse(response.text);
-    if (details) {
-      return {
-        ...location,
-        ...details
-      };
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: locationDetailsSchema,
     }
-    throw new Error("No data returned details");
-  } catch (error) {
-    console.error("Error fetching location details:", error);
-    throw error;
-  }
+  });
+
+  const details = parseJSONResponse(response.text);
+  if (!details) throw new Error("Failed to load details");
+
+  return {
+    ...location,
+    ...details,
+    verses: details.verses.map((v: any) => ({
+      ...v,
+      url: getTWGBRLink(v.reference)
+    }))
+  };
 };

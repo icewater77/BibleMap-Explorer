@@ -1,12 +1,14 @@
+
 export interface Verse {
-  reference: string; // e.g., "馬太福音 2:1"
-  text: string;      // e.g., "當希律王的時候，耶穌生在猶太的伯利恆..."
+  reference: string; 
+  text: string;      
+  url?: string;      // Link to line.twgbr.org
 }
 
 export interface LocationData {
   id: string;
-  name: string;          // Traditional Chinese name (e.g., "耶路撒冷")
-  englishName: string;   // e.g., "Jerusalem"
+  name: string;          
+  englishName: string;   
   latitude: number;
   longitude: number;
   shortDescription: string;
