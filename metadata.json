@@ -1,5 +1,5 @@
 {
-  "name": "BibleMap Explorer (聖經地圖)",
+  "name": "BibleMap Explorer (聖經恢復本地圖搜尋機器人)",
   "description": "An interactive map application to explore biblical locations, view corresponding verses, and understand historical context using Gemini AI. (探索聖經地名，查看經節與地理位置)",
   "requestFramePermissions": [
     "geolocation"
