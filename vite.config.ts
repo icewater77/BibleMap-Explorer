@@ -6,10 +6,18 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': {
-      API_KEY: JSON.stringify(process.env.API_KEY)
+      GEMINI_API_KEY: JSON.stringify(process.env.GEMINI_API_KEY)
     }
   },
   build: {
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'leaflet', 'react-leaflet', 'lucide-react'],
+          genai: ['@google/genai']
+        }
+      }
+    }
   }
 });

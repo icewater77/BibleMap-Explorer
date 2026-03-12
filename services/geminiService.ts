@@ -2,8 +2,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { LocationData, LocationDetails } from "../types";
 
-// Note: process.env.API_KEY is injected via Vite's define config
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in the environment.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 const locationListSchema = {
   type: Type.ARRAY,
@@ -65,6 +75,7 @@ export const fetchBibleLocations = async (query: string = ""): Promise<LocationD
       ? `Search for biblical locations related to "${query}" in the context of the Recovery Version Bible. Provide geographical coordinates.`
       : `Provide a list of 10 major biblical cities or landmarks mentioned in the Old and New Testament Recovery Version.`;
 
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -93,6 +104,7 @@ export const fetchLocationDetails = async (location: LocationData): Promise<Loca
     3. Provide 3-5 key verses with their full text strictly from the Recovery Version.
   `;
 
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
     contents: prompt,
